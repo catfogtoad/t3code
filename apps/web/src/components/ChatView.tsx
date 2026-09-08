@@ -207,7 +207,8 @@ import { LinkPullRequestDialogHost } from "./pullRequest/LinkPullRequestDialog";
 import { ThreadPullRequestsPanel } from "./pullRequest/ThreadPullRequestsPanel";
 import { useDeviceState } from "~/state/device";
 import { DeviceSetup } from "./device/DeviceSetup";
-import { Dialog, DialogPopup } from "./ui/dialog";
+import { Dialog } from "./ui/dialog";
+import { WizardPopup } from "./ui/wizard";
 import {
   deriveAgentPanelModel,
   foldSubagentActivities,
@@ -8213,7 +8214,7 @@ export default function ChatView(props: ChatViewProps) {
           if (!open) setDeviceSetupThread(null);
         }}
       >
-        <DialogPopup className="max-w-xl overflow-hidden">
+        <WizardPopup>
           {activeThreadRef ? (
             <DeviceSetup
               environmentId={activeThreadRef.environmentId}
@@ -8224,7 +8225,7 @@ export default function ChatView(props: ChatViewProps) {
               }}
             />
           ) : null}
-        </DialogPopup>
+        </WizardPopup>
       </Dialog>
       {rightPanelControlsAtRoot ? panelLayoutControls : null}
       <div
