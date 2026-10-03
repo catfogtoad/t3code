@@ -267,6 +267,10 @@ describe("RemoteEnvironmentAuthorization", () => {
 
       expect(first.socketUrl).toContain("wsTicket=first-ticket");
       expect(second.socketUrl).toContain("wsTicket=second-ticket");
+      // Only the call that fetched the descriptor passes it on. The cached one
+      // may be stale, so the resolver fetches a current one for its own checks.
+      expect(first.descriptor?.environmentId).toBe(ENVIRONMENT_ID);
+      expect(second.descriptor).toBeUndefined();
       expect(
         harness.fetch.calls.filter(([url]) => String(url).endsWith("/.well-known/t3/environment")),
       ).toHaveLength(1);

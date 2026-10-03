@@ -190,7 +190,9 @@ export const make = Effect.gen(function* () {
           _tag: "Bearer" as const,
           token: input.bearerToken,
         },
-        descriptor,
+        // Only a descriptor fetched in this call. A cached one can be stale,
+        // and the caller checks protocol compatibility against it.
+        descriptor: canReuseDescriptor ? undefined : descriptor,
       };
     },
   );

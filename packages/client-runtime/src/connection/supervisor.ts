@@ -407,6 +407,8 @@ export const make = Effect.fn("EnvironmentSupervisor.make")(function* (
           if (next.reason === "application-active-reconnect") {
             // Only an attempt that started before the suspension can be stuck
             // on a transport the OS froze. A fresh attempt keeps its progress.
+            // Wall-clock time on purpose: it counts the time in suspension,
+            // which a monotonic clock can leave out while the device sleeps.
             if ((yield* Clock.currentTimeMillis) - attemptStartedAt >= FRESH_ATTEMPT_WINDOW_MS) {
               return true;
             }
