@@ -4294,6 +4294,76 @@ describe("ClaudeAdapterV2 background wake turns", () => {
     ),
   );
 
+  it.effect.each([
+    { scope: "session", reapplies: true },
+    { scope: undefined, reapplies: true },
+    { scope: "local", reapplies: false },
+  ] as const)(
+    "puts the thread's model back on the turn after a Claude refusal fallback (%j)",
+    ({ scope, reapplies }) =>
+      Effect.gen(function* () {
+        const harness = yield* makeWakeHarness;
+        const now = yield* DateTime.now;
+        const selected = {
+          instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
+          model: "claude-opus-5-5",
+        } satisfies ModelSelection;
+        const turn = (ordinal: number) =>
+          makeClaudeTestTurnInput({
+            threadId: harness.threadId,
+            providerThread: harness.providerThread,
+            now,
+            attemptId: RunAttemptId.make(`claude-refusal-fallback:${ordinal}`),
+            text: `Request ${ordinal}`,
+            attachments: [],
+            providerTurnOrdinal: ordinal,
+            modelSelection: selected,
+          });
+        const settle = Effect.gen(function* () {
+          yield* harness.offerAndWait(turnOneResult);
+          yield* Queue.take(harness.terminalReceipts);
+        });
+
+        yield* harness.runtime.startTurn(turn(1));
+        const openedOptions = harness.getOpenedOptions();
+        yield* harness.offerAndWait(
+          claudeSdkFrame({
+            type: "system",
+            subtype: "model_refusal_fallback",
+            trigger: "refusal",
+            direction: "retry",
+            ...(scope === undefined ? {} : { scope }),
+            original_model: "claude-opus-5-5",
+            fallback_model: "claude-opus-4-8",
+            request_id: "request-refusal-fallback",
+            content: "Switched to Opus 4.8.",
+            session_id: WAKE_NATIVE_SESSION,
+            uuid: "00000000-0000-4000-8000-000000000311",
+          }),
+        );
+        yield* settle;
+        assert.deepEqual(harness.liveSelectionChanges, []);
+
+        yield* harness.runtime.startTurn(turn(2));
+        yield* settle;
+        assert.deepEqual(
+          harness.liveSelectionChanges,
+          reapplies
+            ? [
+                { model: "claude-opus-5-5" },
+                { effortLevel: "medium", fastMode: false, ultracode: null },
+              ]
+            : [],
+        );
+        assert.strictEqual(harness.getOpenedOptions(), openedOptions);
+      }).pipe(
+        Effect.scoped,
+        Effect.provide(
+          Layer.mergeAll(NodeServices.layer, IdAllocator.layer, McpProviderSessions.layer),
+        ),
+      ),
+  );
+
   it.effect("shows a hook-dropped Claude prompt once and skips info-level lines", () =>
     Effect.gen(function* () {
       const harness = yield* makeWakeHarness;

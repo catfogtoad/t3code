@@ -7200,6 +7200,16 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             (message.subtype === "model_refusal_fallback" ||
               (message.subtype === "informational" && message.level !== "info"))
           ) {
+            // A session fallback swaps the CLI's model for the rest of the
+            // process, but the thread still selects the refused model. Claude
+            // selections are turn-scoped, so the next turn applies it again.
+            if (
+              message.subtype === "model_refusal_fallback" &&
+              message.scope !== "local" &&
+              input.replayed !== true
+            ) {
+              liveQuery.selection = { ...liveQuery.selection, queryIdentity: "" };
+            }
             const now = yield* DateTime.now;
             const nativeItemId = message.uuid;
             context.assistant.noticeTexts.add(message.content);
